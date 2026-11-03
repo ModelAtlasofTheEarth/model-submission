@@ -25,6 +25,14 @@ def read_issue_body(issue_body):
     """
     regex = r"### *(?P<key>.*?)\s*[\r\n]+(?P<value>[\s\S]*?)(?=###|$)"
     data = dict(re.findall(regex, issue_body))
+
+    # GitHub wraps textarea values configured with `render: text` in a fenced
+    # code block.  The fence is presentation markup, not part of the user's
+    # response, and must not be passed to author, URI, or list parsers.
+    for key, value in data.items():
+        lines = value.strip().splitlines()
+        if len(lines) >= 2 and lines[0].strip().startswith("```") and lines[-1].strip() == "```":
+            data[key] = "\n".join(lines[1:-1]).strip()
     return data
 
 
@@ -93,7 +101,7 @@ def parse_issue(issue):
     #############
 
     # associated publication DOI
-    publication_doi = data["-> associated publication DOI"].strip()
+    publication_doi = data["publication DOI"].strip()
     publication_record = {}
 
     if publication_doi == "_No response_":
@@ -116,7 +124,7 @@ def parse_issue(issue):
     # Fill in 'software' record next as it may be required by other items
     #############
     # software framework DOI/URI
-    software_doi = data["-> software framework DOI/URI"].strip()
+    software_doi = data["software DOI/URI"].strip()
 
     software_doi_only = extract_doi_parts(software_doi)
 
@@ -140,7 +148,7 @@ def parse_issue(issue):
             #msg_log += "**Software Framework DOI/URI**\n Non-Zenodo software dois not yet supported\n"
 
     # software framework source repository
-    software_repo = data["-> software framework source repository"].strip()
+    software_repo = data["Software source repository"].strip()
 
     if software_repo == "_No response_":
         msg_log += "**Software Repository**\n"
@@ -153,7 +161,7 @@ def parse_issue(issue):
             msg_log += "**Software Repository**\n" + response + "\n"
 
     # name of primary software framework
-    software_name = data["-> name of primary software framework (e.g. Underworld, ASPECT, Badlands, OpenFOAM)"].strip()
+    software_name = data["Provide the name of the software (e.g. Underworld, ASPECT, Badlands, OpenFOAM)"].strip()
 
     if software_name == "_No response_":
         try:
@@ -165,7 +173,7 @@ def parse_issue(issue):
         software_record["name"] = software_name     # N.B. this will overwrite any name obtained from the DOI
 
     # software framework authors
-    authors = data['-> software framework authors'].strip().split('\r\n')
+    authors = data['software authors'].strip().split('\r\n')
 
     #if authors[0] == "_No response_":
     if null_response_check(authors[0]):
@@ -182,8 +190,8 @@ def parse_issue(issue):
             msg_log += "**Software framework authors**\n" + log
 
     # software & algorithm keywords
-    #software_keywords = [x.strip() for x in data["-> software & algorithm keywords"].split(",")]
-    software_keywords = separate_string(data["-> software & algorithm keywords"])
+    #software_keywords = [x.strip() for x in data["software & algorithm keywords"].split(",")]
+    software_keywords = separate_string(data["software & algorithm keywords"])
 
     #if software_keywords[0] == "_No response_":
     if null_response_check(software_keywords[0]):
@@ -191,6 +199,13 @@ def parse_issue(issue):
         msg_log += "Warning: no keywords given. \n"
     else:
         software_record["keywords"] = software_keywords
+
+    # Software version used (tag, version, or commit SHA supplied by the
+    # submitter).  Keep this separate from softwareVersion obtained from a
+    # DOI so that an explicitly supplied value takes precedence.
+    software_version = data["Software version used."].strip()
+    if not null_response_check(software_version):
+        software_record["softwareVersion"] = software_version
 
     data_dict["software"] = software_record
 
@@ -201,14 +216,14 @@ def parse_issue(issue):
     # The following fields get added to the data_dict: submitter, creator, contributor, data_creator.
 
     # submitter (individual). Not necessarily the creator of the original model.
-    submitter = data["-> submitter ORCID (or name)"].strip()
+    submitter = data["submitter ORCID (or name)"].strip()
     submitter_record, log = parse_name_or_orcid(submitter)
     data_dict["submitter"] = submitter_record
     if log:
         msg_log += "**Submitter**\n" + log +"\n"
 
     # model creators
-    creators = data['-> model creators'].strip().split('\r\n')
+    creators = data['contributing authors'].strip().split('\r\n')
     #test if the input has an orcid type, and if so, make sure only the orcid id is present
 
 
@@ -236,7 +251,7 @@ def parse_issue(issue):
 
 
     # model contributors. This has been depricated. Now we simply record Creators, and submitter.
-    #contributors = data['-> model contributors'].strip().split('\r\n')
+    #contributors = data['contributing authors'].strip().split('\r\n')
     #test if the input has an orcid type, and if so, make sure only the orcid id is present
     #orcid_id = extract_orcid(contributors[0])
     #if orcid_id:
@@ -266,7 +281,7 @@ def parse_issue(issue):
 
 
     # slug
-    proposed_slug = data["-> slug"].strip()
+    proposed_slug = data["slug"].strip()
     data_dict["proposed_slug"] = proposed_slug
 
     slug, log = validate_slug(proposed_slug)
@@ -285,7 +300,7 @@ def parse_issue(issue):
     data_dict["for_codes"] = about_record
 
     # license
-    license = data["-> license"].strip()
+    license = data["license"].strip()
 
     def find_file_upwards( fName: str, maxLevels: int=5) -> str | None:
         """
@@ -323,8 +338,8 @@ def parse_issue(issue):
     data_dict["license"] = license_record
 
     # model category
-    #model_category = [x.strip() for x in data["-> model category"].split(",")]
-    model_category = separate_string(data["-> model category"])
+    #model_category = [x.strip() for x in data["model category"].split(",")]
+    model_category = separate_string(data["model category"])
 
     #if model_category[0] == "_No response_":
     if null_response_check(model_category[0]):
@@ -338,8 +353,8 @@ def parse_issue(issue):
     # model status
     model_status = []
     try:
-        #model_status = [x.strip() for x in data["-> model status"].split(",")]
-        model_status = separate_string(data["-> model status"])
+        #model_status = [x.strip() for x in data["model status"].split(",")]
+        model_status = separate_string(data["model status"])
 
         #if model_status[0] == "_No response_":
         if null_response_check(model_status[0]):
@@ -351,7 +366,7 @@ def parse_issue(issue):
 
 
     # title
-    title = data["-> title"].strip()
+    title = data["title"].strip()
 
     #if title == "_No response_":
     if null_response_check(title):
@@ -365,7 +380,7 @@ def parse_issue(issue):
     data_dict["title"] = title
 
     # abstract
-    abstract = data["-> abstract"].strip()
+    abstract = data["abstract"].strip()
 
     #if abstract == "_No response_":
     if null_response_check(abstract):
@@ -379,12 +394,12 @@ def parse_issue(issue):
     data_dict["abstract"] = abstract
 
     # description - brief plain langauge summary.
-    description = data["-> description"].strip()
+    description = data["description"].strip()
     data_dict["description"] = description
 
     # scientific keywords
-    #keywords = [x.strip() for x in data["-> scientific keywords"].split(",")]
-    keywords = separate_string(data["-> scientific keywords"])
+    #keywords = [x.strip() for x in data["scientific keywords"].split(",")]
+    keywords = separate_string(data["scientific keywords"])
 
     #if keywords[0] == "_No response_":
     if null_response_check(keywords[0]):
@@ -395,9 +410,9 @@ def parse_issue(issue):
     data_dict["scientific_keywords"] = keywords
 
     # funder
-    #funders = [x.strip() for x in data["-> funder"].split(",")]
+    #funders = [x.strip() for x in data["funder"].split(",")]
 
-    funders_string = data["-> funder"]
+    funders_string = data["funder"]
     funders_dict = process_funding_data(funders_string)
 
     #if funders[0] == "_No response_":
@@ -423,9 +438,9 @@ def parse_issue(issue):
     # embargo, record as a Tuple with a Boolean, and a date
     model_embargo = (False, datetime.min.strftime('%Y-%m-%d'))
     try:
-        embargo = data["-> model embargo?"].strip()
+        embargo = data["model embargo?"].strip()
         #if model_embargo[0] == "_No response_":
-        if null_response_check(model_embargo[0]):
+        if null_response_check(embargo):
             pass
         else:
             try:
@@ -446,29 +461,25 @@ def parse_issue(issue):
 
 
     # include model code
-    model_code = data["-> include model code ?"].strip()
+    model_code = data["include model inputs?"].strip()
     data_dict["include_model_code"] = parse_yes_no_choice(model_code)
 
-    # model code/inputs
+    # model links.  The prototype form intentionally uses one field for
+    # existing input/output repositories and DOIs, rather than separate code
+    # and output DOI fields.  Preserve all links on the model-input entity;
+    # the old single DOI slot is left empty because multiple links cannot be
+    # represented reliably as one identifier.
     model_code_record = {}
-    # model code/inputs DOI
-    model_code_doi = data["-> model code/inputs DOI"].strip()
-
-    #if model_code_doi == "_No response_":
-    if null_response_check(model_code_doi):
-        model_code_doi = ""
-        msg_log += "**Model code/inputs DOI**\n"
-        msg_log += "Warning: No DOI/URI provided. \n"
-    else:
-        response = check_uri(model_code_doi)
-        if response != "OK":
-            model_code_doi = ""
-            msg_log += f"**Model code/inputs DOI**\n {response} \n"
-
-    model_code_record["doi"] = model_code_doi
+    model_links = separate_string(data["model links"])
+    if null_response_check(model_links[0]):
+        model_links = []
+        msg_log += "**Model links**\n"
+        msg_log += "Warning: No model links provided. \n"
+    model_code_record["doi"] = ""
+    model_code_record["links"] = model_links
 
     # model code/inputs notes
-    model_code_notes = data["-> model code/inputs notes"].strip()
+    model_code_notes = data["model input usage, a.k.a reproducibility"].strip()
 
     #if model_code_notes == "_No response_":
     if null_response_check(model_code_notes):
@@ -483,7 +494,7 @@ def parse_issue(issue):
 
 
     # include model output data
-    model_output = data["-> include model output data?"].strip()
+    model_output = data["include model output?"].strip()
     #having this outside the record
     #anticipates that we might choose not to build the record if False
     data_dict["include_model_output"] = parse_yes_no_choice(model_output)
@@ -493,46 +504,20 @@ def parse_issue(issue):
     # model output data
     model_output_record = {}
 
-    # model creators
-    data_creators = data['-> data creators'].strip().split('\r\n')
-
-    #test if the input has an orcid type, and if so, make sure only the orcid id is present
-    orcid_id = extract_orcid(data_creators[0])
-    if orcid_id:
-        data_creators = [extract_orcid(p) for p in data_creators]
-    #if data_creators[0] == "_No response_":
-    if null_response_check(data_creators[0]):
-        #if no respones, add the root entity creators
-        data_creators_list = data_dict["creators"]
-        msg_log += "**Data creators**\n"
-        msg_log += "Warning: no data creators found \n"
-    else:
-        data_creators_list, log = get_authors(data_creators)
-        if log:
-            msg_log += "**Data creators**\n" + log
+    # The prototype form no longer asks for separate data creators.  Use the
+    # contributing/model creators for output provenance, matching the old
+    # parser's fallback behavior when that field was blank.
+    data_creators_list = data_dict["creators"]
     model_output_record["creators"] = data_creators_list
 
 
 
-    # model output URI/DOI
-    model_output_doi = data["-> model output data DOI"].strip()
-
-    #if model_output_doi == "_No response_":
-    if null_response_check(model_output_doi):
-    #data_creators[0]
-        model_output_doi = ""
-        msg_log += "**Model output DOI**\n"
-        msg_log += "Warning: No DOI/URI provided. \n"
-    else:
-        response = check_uri(model_output_doi)
-        if response != "OK":
-            model_output_doi = ""
-            msg_log += "**Model output DOI**\n" + response + "\n"
-
-    model_output_record["doi"] = model_output_doi
+    # The prototype form has no separate output DOI field; any shared model
+    # links were retained on model_code_inputs.links above.
+    model_output_record["doi"] = ""
 
     # model output notes
-    model_output_notes = data["-> model output data notes"].strip()
+    model_output_notes = data["model output notes"].strip()
 
     #if model_output_notes == "_No response_":
     if null_response_check(model_output_notes):
@@ -543,7 +528,7 @@ def parse_issue(issue):
     model_output_record["notes"] = model_output_notes
 
     # model output size
-    model_output_size = data["-> model output data size"].strip()
+    model_output_size = data["model output size"].strip()
     data_bytes_value = None
 
     #if model_output_size == "_No response_":
@@ -552,7 +537,10 @@ def parse_issue(issue):
             msg_log += "**Model data size**\n"
             msg_log += "Warning: No notes provided.\n"
 
-    data_bytes_value, size_msg_log = parse_size(model_output_size)
+    if model_output_size:
+        data_bytes_value, size_msg_log = parse_size(model_output_size)
+    else:
+        data_bytes_value, size_msg_log = None, ""
 
     if size_msg_log:
         msg_log +=size_msg_log
@@ -572,7 +560,7 @@ def parse_issue(issue):
 
     computer_record = {}
     log1 = ''
-    computer_uri = data["-> computer URI/DOI"].strip()
+    computer_uri = data["computer URI/DOI"].strip()
     #if computer_uri == "_No response_":
     if null_response_check(computer_uri):
         msg_log += "**Computer URI/DOI**\n"
@@ -614,7 +602,7 @@ def parse_issue(issue):
     # Section 4
     #############
     # landing page image and caption
-    img_string = data["-> add landing page image and caption"].strip()
+    img_string = data["add landing page image"].strip()
     empty_image_record = {"filename": None, "url": ""}
 
     #if img_string == "_No response_":
@@ -629,7 +617,7 @@ def parse_issue(issue):
         data_dict["landing_image"] = landing_image_record
 
     # animation
-    img_string = data["-> add an animation (if relevant)"].strip()
+    img_string = data["add an animation"].strip()
 
     if img_string == "_No response_":
         msg_log += "**Animation**\n"
@@ -642,7 +630,7 @@ def parse_issue(issue):
         data_dict["animation"] = animation_record
 
     # graphic abstract
-    img_string = data["-> add a graphic abstract figure (if relevant)"].strip()
+    img_string = data["add a graphic abstract figure"].strip()
 
     if img_string == "_No response_":
         msg_log += "**Graphic abstract**\n"
@@ -655,7 +643,7 @@ def parse_issue(issue):
         data_dict["graphic_abstract"] = graphic_abstract_record
 
     # model setup figure
-    img_string = data["-> add a model setup figure (if relevant)"].strip()
+    img_string = data["add a model setup figure"].strip()
 
     if img_string == "_No response_":
         msg_log += "**Model setup figure**\n"
@@ -668,7 +656,7 @@ def parse_issue(issue):
         data_dict["model_setup_figure"] = model_setup_fig_record
 
     # description
-    model_description = data["-> add a description of your model setup"].strip()
+    model_description = data["add a description of your model setup"].strip()
 
     if model_description == "_No response_":
         msg_log += "**Model setup description**\n"

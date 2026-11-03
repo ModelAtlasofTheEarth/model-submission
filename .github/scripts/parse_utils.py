@@ -108,7 +108,8 @@ def parse_yes_no_choice(input):
     '''
     input is assumed to be a string
     '''
-    if "x" in input.lower():
+    normalized = input.strip().lower()
+    if "x" in normalized or normalized in {"yes", "true", "[x] yes", "- yes"}:
         return True
     else:
         return False
