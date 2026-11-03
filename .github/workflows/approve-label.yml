@@ -181,8 +181,8 @@ jobs:
           SUBMITTER: ${{ github.event.issue.user.login }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
           TEMPLATE: mate-model-template
-          BRANCH: rocrate-usage # Shoould be main, but for testing rocrate python package leave as is
-          FLAGS: --public --include-all-branches
+          BRANCH: main
+          FLAGS: --public
         run: |
           REPO_NAME=$(python3 .github/scripts/generate_identifier.py)
           gh repo create ${OWNER}/${REPO_NAME} --template ${OWNER}/$TEMPLATE $FLAGS
