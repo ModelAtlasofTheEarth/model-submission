@@ -105,5 +105,5 @@ if __name__ == "__main__":
 	regex = r"### *(?P<key>.*?)\s*[\r\n]+(?P<value>[\s\S]*?)(?=###|$)"
 	data = dict(re.findall(regex, issue.body))
 
-	slug = data["-> slug"].strip()
+	slug = data["slug"].strip()
 	print(choice(slug))

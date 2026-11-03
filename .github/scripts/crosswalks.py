@@ -122,6 +122,10 @@ def dict_to_report(issue_dict, verbose=False):
         report += f"{str(issue_dict['include_model_code'])} \n\n"
 
     # model code URI/DOI
+    if issue_dict["model_code_inputs"].get("links"):
+        report += "**Model links:**   \n\n"
+        report += "\n".join(issue_dict["model_code_inputs"]["links"]) + "\n\n"
+
     if issue_dict["model_code_inputs"]["doi"]:
         report += "**Model code existing URL/DOI:**   \n\n"
         report += f"{issue_dict['model_code_inputs']['doi']} \n\n"
@@ -164,6 +168,10 @@ def dict_to_report(issue_dict, verbose=False):
     if "name" in issue_dict["software"]:
         report += "**Name of primary software framework:**  \n\n"
         report += f"{issue_dict['software']['name']} \n\n"
+
+    if "softwareVersion" in issue_dict["software"]:
+        report += "**Software version used:**  \n\n"
+        report += f"{issue_dict['software']['softwareVersion']} \n\n"
 
     if verbose is True:
         # software framework authors

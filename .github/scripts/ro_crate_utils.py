@@ -676,7 +676,23 @@ def defaults_and_customise_ro_crate(issue_dict, ro_crate, timestamp=False, githu
     if isinstance(roc_index, int):
         ro_crate['@graph'][roc_index]['url'] = thredds_string
     roc_index = find_index_by_id(ro_crate, 'model_code_inputs')
-    ro_crate['@graph'][roc_index]['url'] = thredds_string
+    if isinstance(roc_index, int):
+        # Keep links supplied through the prototype form in addition to the
+        # generated NCI/THREDDS location.  The old implementation replaced
+        # the mapped URL unconditionally, which silently discarded the new
+        # form's `model links` value.
+        existing_url = ro_crate['@graph'][roc_index].get('url')
+        existing_urls = []
+        if isinstance(existing_url, list):
+            existing_urls = existing_url
+        elif existing_url:
+            existing_urls = [existing_url]
+        submitted_links = issue_dict.get('model_code_inputs', {}).get('links', [])
+        if isinstance(submitted_links, str):
+            submitted_links = [submitted_links]
+        ro_crate['@graph'][roc_index]['url'] = [thredds_string] + [
+            url for url in existing_urls if url != thredds_string
+        ] + [url for url in submitted_links if url not in existing_urls and url != thredds_string]
 
 
     #add date time as the date published ro-crate

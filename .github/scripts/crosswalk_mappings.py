@@ -32,8 +32,9 @@ root_node_mapping = {"@id":"./",
 
 
 model_inputs_node_mapping = {"@id":None,
-            "identifier": ["model_code_inputs.doi"],
-            "@type":None,
+             "identifier": ["model_code_inputs.doi"],
+             "url": "model_code_inputs.links",
+             "@type":None,
             "description":None,
             "creator":"creators",
             "version":None,
