@@ -154,30 +154,30 @@ def dict_to_report(issue_dict, verbose=False):
     # Section 3
     #############
     report += "## Section 3: software framework and compute details   \n"
-    # software framework DOI/URI
-    if "@id" in issue_dict["software"]:
-        report += "**Software Framework DOI/URL:**  \n\n"
-        report += f"Found software: _[{issue_dict['software']['name']}]({issue_dict['software']['@id']})_ \n\n"
+    software_records = issue_dict.get("software", [])
+    if isinstance(software_records, dict):
+        software_records = [software_records]
+    for software_number, software in enumerate(software_records, start=1):
+        report += f"### Software framework {software_number}\n\n"
+        if "@id" in software:
+            report += "**Software Framework DOI/URL:**  \n\n"
+            report += f"Found software: _[{software.get('name', 'Unnamed software')}]({software['@id']})_ \n\n"
 
-    # software framework source repository
-    if "codeRepository" in issue_dict["software"]:
-        report += "**Software Repository:**   \n\n"
-        report += f"{issue_dict['software']['codeRepository']} \n\n"
+        if "codeRepository" in software:
+            report += "**Software Repository:**   \n\n"
+            report += f"{software['codeRepository']} \n\n"
 
-    # name of primary software framework
-    if "name" in issue_dict["software"]:
-        report += "**Name of primary software framework:**  \n\n"
-        report += f"{issue_dict['software']['name']} \n\n"
+        if "name" in software:
+            report += "**Name of software framework:**  \n\n"
+            report += f"{software['name']} \n\n"
 
-    if "softwareVersion" in issue_dict["software"]:
-        report += "**Software version used:**  \n\n"
-        report += f"{issue_dict['software']['softwareVersion']} \n\n"
+        if "softwareVersion" in software:
+            report += "**Software version used:**  \n\n"
+            report += f"{software['softwareVersion']} \n\n"
 
-    if verbose is True:
-        # software framework authors
-        if "author" in issue_dict["software"]:
+        if verbose is True and "author" in software:
             report += "**Software framework authors:**  \n"
-            for author in issue_dict["software"]["author"]:
+            for author in software["author"]:
                 if "givenName" in author and "familyName" in author:
                     report += f"- {author['givenName']} {author['familyName']} "
                 elif "name" in author:
@@ -187,12 +187,11 @@ def dict_to_report(issue_dict, verbose=False):
                 report += "  \n"
             report += "  \n"
 
-    # software & algorithm keywords
-    if "keywords" in issue_dict["software"]:
-        report += "**Software & algorithm keywords:**  \n\n"
-        for keyword in issue_dict["software"]["keywords"]:
-            report += f"- {keyword}   \n"
-        report += "  \n"
+        if "keywords" in software:
+            report += "**Software & algorithm keywords:**  \n\n"
+            for keyword in software["keywords"]:
+                report += f"- {keyword}   \n"
+            report += "  \n"
 
     # computer URI/DOI
     if "computer_uri" in issue_dict:

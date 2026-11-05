@@ -55,6 +55,16 @@ def null_response_check(string):
     return result
 
 
+def aligned_lines(value):
+    """Return non-destructive, one-value-per-line input for aligned fields."""
+    if value is None:
+        return []
+    value = value.strip()
+    if not value or value == "_No response_":
+        return []
+    return [line.strip() for line in value.splitlines()]
+
+
 def parse_issue(issue):
 
     """
@@ -123,91 +133,80 @@ def parse_issue(issue):
     #############
     # Fill in 'software' record next as it may be required by other items
     #############
-    # software framework DOI/URI
-    software_doi = data["software DOI/URI"].strip()
+    # Each software field is aligned by line number. Unequal lengths are
+    # padded and reported rather than silently shifting values.
+    software_fields = {
+        "DOI/URI": aligned_lines(data.get("software DOI/URI", "")),
+        "repository": aligned_lines(data.get("Software source repository", "")),
+        "version": aligned_lines(data.get("Software version used.", "")),
+        "name": aligned_lines(data.get("Provide the name of the software (e.g. Underworld, ASPECT, Badlands, OpenFOAM)", "")),
+        "authors": aligned_lines(data.get("software authors", "")),
+        "keywords": aligned_lines(data.get("software & algorithm keywords", "")),
+    }
+    non_empty_lengths = [len(values) for values in software_fields.values() if values]
+    software_count = max(non_empty_lengths, default=1)
+    if len(set(non_empty_lengths)) > 1:
+        msg_log += "**Software framework fields**\n"
+        msg_log += (
+            "Warning: software fields contain different numbers of lines; "
+            "values were aligned by line and missing values were left blank.\n"
+        )
 
-    software_doi_only = extract_doi_parts(software_doi)
+    software_records = []
+    for index in range(software_count):
+        software_doi = software_fields["DOI/URI"][index] if index < len(software_fields["DOI/URI"]) else ""
+        software_record = {"@type": "SoftwareApplication", "@id": f"#software-{index + 1}"}
 
-    software_record={"@type": "SoftwareApplication"}
-
-    if software_doi == "_No response_":
-        msg_log += "**Software Framework DOI/URI**\n"
-        msg_log += "Warning: no DOI/URI provided.\n"
-
-    else:
-        try:
-            software_metadata, log1 = get_record("software", software_doi_only)
-            software_record, log2 = parse_software(software_metadata, software_doi)
-            if log1 or log2:
-                msg_log += "**Software Framework DOI/URI**\n" + log1 + log2
-        except Exception as err:
-            msg_log += "**Software Framework DOI/URI**\n"
-            msg_log += f"Warning: unable to obtain metadata for DOI `{software_doi}` \n"
-            msg_log += f"`{err}`\n"
-    #else:
-            #msg_log += "**Software Framework DOI/URI**\n Non-Zenodo software dois not yet supported\n"
-
-    # software framework source repository
-    software_repo = data["Software source repository"].strip()
-
-    if software_repo == "_No response_":
-        msg_log += "**Software Repository**\n"
-        msg_log += "Warning: no repository URL provided. \n"
-    else:
-        response = check_uri(software_repo)
-        if response == "OK":
-            software_record["codeRepository"] = software_repo
+        if not software_doi:
+            msg_log += f"**Software Framework DOI/URI (line {index + 1})**\n"
+            msg_log += "Warning: no DOI/URI provided.\n"
         else:
-            msg_log += "**Software Repository**\n" + response + "\n"
+            try:
+                software_doi_only = extract_doi_parts(software_doi)
+                software_metadata, log1 = get_record("software", software_doi_only)
+                software_record, log2 = parse_software(software_metadata, software_doi)
+                software_record.setdefault("@id", f"#software-{index + 1}")
+                if log1 or log2:
+                    msg_log += f"**Software Framework DOI/URI (line {index + 1})**\n" + log1 + log2
+            except Exception as err:
+                msg_log += f"**Software Framework DOI/URI (line {index + 1})**\n"
+                msg_log += f"Warning: unable to obtain metadata for DOI `{software_doi}`\n"
+                msg_log += f"`{err}`\n"
 
-    # name of primary software framework
-    software_name = data["Provide the name of the software (e.g. Underworld, ASPECT, Badlands, OpenFOAM)"].strip()
+        software_repo = software_fields["repository"][index] if index < len(software_fields["repository"]) else ""
+        if software_repo:
+            response = check_uri(software_repo)
+            if response == "OK":
+                software_record["codeRepository"] = software_repo
+            else:
+                msg_log += f"**Software Repository (line {index + 1})**\n{response}\n"
 
-    if software_name == "_No response_":
-        try:
-            software_name = software_record['name']
-        except:
-            msg_log += "**Name of primary software framework**\n"
-            msg_log += "Warning: no name found \n"
-    else:
-        software_record["name"] = software_name     # N.B. this will overwrite any name obtained from the DOI
+        software_name = software_fields["name"][index] if index < len(software_fields["name"]) else ""
+        if software_name:
+            software_record["name"] = software_name
+        elif not software_record.get("name"):
+            msg_log += f"**Name of software framework (line {index + 1})**\n"
+            msg_log += "Warning: no name found.\n"
 
-    # software framework authors
-    authors = data['software authors'].strip().split('\r\n')
+        authors_line = software_fields["authors"][index] if index < len(software_fields["authors"]) else ""
+        if authors_line:
+            authors = [author.strip() for author in authors_line.split(";") if author.strip()]
+            software_author_list, log = get_authors(authors)
+            software_record["author"] = software_author_list
+            if log:
+                msg_log += f"**Software framework authors (line {index + 1})**\n{log}"
 
-    #if authors[0] == "_No response_":
-    if null_response_check(authors[0]):
-        try:
-            software_author_list = software_record["author"]
-        except:
-            software_author_list = []
-            msg_log += "**Software framework authors**\n"
-            msg_log += "Warning: no authors found \n"
-    else:
-        software_author_list, log = get_authors(authors)
-        software_record["author"] = software_author_list     # N.B. this will overwrite any name obtained from the DOI
-        if log:
-            msg_log += "**Software framework authors**\n" + log
+        keywords_line = software_fields["keywords"][index] if index < len(software_fields["keywords"]) else ""
+        if keywords_line:
+            software_record["keywords"] = separate_string(keywords_line)
 
-    # software & algorithm keywords
-    #software_keywords = [x.strip() for x in data["software & algorithm keywords"].split(",")]
-    software_keywords = separate_string(data["software & algorithm keywords"])
+        software_version = software_fields["version"][index] if index < len(software_fields["version"]) else ""
+        if software_version:
+            software_record["softwareVersion"] = software_version
 
-    #if software_keywords[0] == "_No response_":
-    if null_response_check(software_keywords[0]):
-        msg_log += "**Software & algorithm keywords**\n"
-        msg_log += "Warning: no keywords given. \n"
-    else:
-        software_record["keywords"] = software_keywords
+        software_records.append(software_record)
 
-    # Software version used (tag, version, or commit SHA supplied by the
-    # submitter).  Keep this separate from softwareVersion obtained from a
-    # DOI so that an explicitly supplied value takes precedence.
-    software_version = data["Software version used."].strip()
-    if not null_response_check(software_version):
-        software_record["softwareVersion"] = software_version
-
-    data_dict["software"] = software_record
+    data_dict["software"] = software_records
 
 
     #############

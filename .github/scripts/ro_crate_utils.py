@@ -5,8 +5,9 @@ import random
 from config import *
 import re
 import glob
+import copy
 from collections.abc import MutableMapping
-from fuzzywuzzy import fuzz, process
+from rapidfuzz import fuzz, process
 
 
 def get_nested_value(d, key):
@@ -662,6 +663,44 @@ def defaults_and_customise_ro_crate(issue_dict, ro_crate, timestamp=False, githu
     root_index = find_index_by_id(ro_crate, './')
     ro_crate['@graph'][root_index]['isPartOf'].append(MATE_DOI)
     ro_crate['@graph'][root_index]['publisher'] = [AUSCOPE_RECORD, NCI_RECORD]
+
+    # A model may use more than one software framework. Keep each framework
+    # as a separate RO-Crate entity and link all of them from the creation
+    # activity's instrument property. Accept a dict as well as a list so
+    # older single-software submissions remain valid.
+    software_records = issue_dict.get('software', [])
+    if isinstance(software_records, dict):
+        software_records = [software_records]
+    creation_index = find_index_by_id(ro_crate, '#datasetCreation')
+    if isinstance(creation_index, int):
+        instrument_refs = []
+        existing_ids = {entity.get('@id') for entity in ro_crate['@graph']}
+        for software_number, software in enumerate(software_records, start=1):
+            software = copy.deepcopy(software)
+            software_id = software.get('@id') or f'#software-{software_number}'
+            software['@id'] = software_id
+            existing_index = find_index_by_id(ro_crate, software_id)
+            if isinstance(existing_index, int):
+                ro_crate['@graph'][existing_index].update(software)
+            elif software_id not in existing_ids:
+                ro_crate['@graph'].append(software)
+                existing_ids.add(software_id)
+            instrument_refs.append({'@id': software_id})
+
+        computer_resource = issue_dict.get('computer_resource', {})
+        if isinstance(computer_resource, dict) and computer_resource:
+            computer_resource = copy.deepcopy(computer_resource)
+            computer_id = computer_resource.get('@id') or '#computer-resource'
+            computer_resource['@id'] = computer_id
+            existing_index = find_index_by_id(ro_crate, computer_id)
+            if isinstance(existing_index, int):
+                ro_crate['@graph'][existing_index].update(computer_resource)
+            elif computer_id not in existing_ids:
+                ro_crate['@graph'].append(computer_resource)
+                existing_ids.add(computer_id)
+            instrument_refs.append({'@id': computer_id})
+
+        ro_crate['@graph'][creation_index]['instrument'] = instrument_refs
     #add the mate.science url for this model
     #the logic is that the metadata captures all of the access points:
     # the root identifier is the doi that points to the geonetwork record

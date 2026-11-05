@@ -224,7 +224,8 @@ body:
       value: | 
         ## Section 3: software and compute details
 
-        ### All fields below, in this section, will be automatically populated using the software DOI _after_ the form is submitted. If no software DOI is available, please skip the following software DOI field and complete all of the subsequent fields manually.
+        ### Enter one software framework per line. Use the same line order in each field below; for example, line 1 in every field describes the same framework. Leave a line blank when a value is unavailable so that the remaining lines stay aligned.
+        ### All fields below, in this section, will be automatically populated using the software DOI _after_ the form is submitted. If no software DOI is available, complete the fields manually.
 
   - type: textarea
     id: software_framework_doi_uri
@@ -233,29 +234,32 @@ body:
       render: text
       placeholder: "e.g., https://doi.org/10.5281/zenodo.7455999"
       description: |
-        Software used (e.g. Underworld, Badlands, Citcom, FEniCS)
-        Providing a DOI here will automatically populate the fields below. You can give multiple DOI by entering one per line.
+        Software used (e.g. Underworld, Badlands, Citcom, FEniCS). Enter one software framework DOI/URI per line.
+        Providing a DOI here will automatically populate the corresponding fields below. Keep all software fields in the same order, one framework per line.
 
-  - type: input
+  - type: textarea
     id: software_framework_repository
     attributes:
       label: Software source repository
+      render: text
       placeholder: "e.g., https://github.com/underworldcode/underworld2"
-      description: "If the software has a public source code repository, please add it here"
+      description: "Enter one source repository per line, in the same order as the software DOI/URI field. Leave a line blank if unavailable."
 
-  - type: input
+  - type: textarea
     id: software_version_id
     attributes:
       label: Software version used.
+      render: text
       placeholder: "e.g., v2.17.1"
-      description: "Tag, Version or sha commit"
+      description: "Enter one tag, version, or commit SHA per line, in the same order as the software DOI/URI field. Leave a line blank if unavailable."
 
-  - type: input
+  - type: textarea
     id: software_framework
     attributes:
       label: Provide the name of the software (e.g. Underworld, ASPECT, Badlands, OpenFOAM)
+      render: text
       placeholder: "e.g., Underworld2"
-      description: "The software name will be fetch from the DOI if left blank."
+      description: "Enter one software framework name per line, in the same order as the software DOI/URI field. The name will be fetched from the DOI when a line is left blank."
 
   - type: textarea
     id: software_framework_authors
@@ -263,14 +267,15 @@ body:
       render: text
       label: software authors
       placeholder: "e.g., ORCID iD (or Citizen, Jane)"
-      description: "Provide ORCID iDs for software authors (or FamilyName(s), GivenName(s)), one per line. If no input provided, authors from software DOI will be used"
+      description: "Enter one software framework per line, in the same order as the software DOI/URI field. Separate multiple authors for one framework with semicolons. If blank, authors from the software DOI will be used."
 
-  - type: input
+  - type: textarea
     id: software_keywords
     attributes:
+      render: text
       label: software & algorithm keywords
       placeholder: "e.g., Python, Finite element, MPI ..."
-      description: "Separate keywords by comma"
+      description: "Enter one software framework per line, in the same order as the software DOI/URI field. Separate keywords for one framework by commas."
 
   - type: input
     id: compute_doi
