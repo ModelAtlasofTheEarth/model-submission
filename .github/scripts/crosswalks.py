@@ -90,6 +90,12 @@ def dict_to_report(issue_dict, verbose=False):
             report += f"- {keyword}   \n"
         report += "  \n"
 
+    if issue_dict.get("software_keywords"):
+        report += "**Software & algorithm keywords (model-wide):**  \n\n"
+        for keyword in issue_dict["software_keywords"]:
+            report += f"- {keyword}   \n"
+        report += "  \n"
+
     # funder
     report += "**Funder(s):**  \n"
     for funder in issue_dict["funder"]:
@@ -185,12 +191,6 @@ def dict_to_report(issue_dict, verbose=False):
                 if "@id" in author:
                     report += f"([{author['@id'].split('/')[-1]}]({author['@id']}))"
                 report += "  \n"
-            report += "  \n"
-
-        if "keywords" in software:
-            report += "**Software & algorithm keywords:**  \n\n"
-            for keyword in software["keywords"]:
-                report += f"- {keyword}   \n"
             report += "  \n"
 
     # computer URI/DOI

@@ -224,8 +224,9 @@ body:
       value: | 
         ## Section 3: software and compute details
 
-        ### Enter one software framework per line. Use the same line order in each field below; for example, line 1 in every field describes the same framework. Leave a line blank when a value is unavailable so that the remaining lines stay aligned.
-        ### All fields below, in this section, will be automatically populated using the software DOI _after_ the form is submitted. If no software DOI is available, complete the fields manually.
+        ### Enter one software framework per line in the DOI/URI, repository, version, name, and author fields below. Keep those fields in the same line order; for example, line 1 in each field describes the same framework. Leave a line blank when a value is unavailable so that the remaining lines stay aligned.
+        ### The software and algorithm keywords field applies to the model as a whole and is not aligned to individual frameworks.
+        ### The framework fields below will be automatically populated using the software DOI _after_ the form is submitted. If no software DOI is available, complete them manually.
 
   - type: textarea
     id: software_framework_doi_uri
@@ -235,7 +236,7 @@ body:
       placeholder: "e.g., https://doi.org/10.5281/zenodo.7455999"
       description: |
         Software used (e.g. Underworld, Badlands, Citcom, FEniCS). Enter one software framework DOI/URI per line.
-        Providing a DOI here will automatically populate the corresponding fields below. Keep all software fields in the same order, one framework per line.
+        Providing a DOI here will automatically populate the corresponding framework fields below. Keep those fields in the same order, one framework per line.
 
   - type: textarea
     id: software_framework_repository
@@ -275,7 +276,7 @@ body:
       render: text
       label: software & algorithm keywords
       placeholder: "e.g., Python, Finite element, MPI ..."
-      description: "Enter one software framework per line, in the same order as the software DOI/URI field. Separate keywords for one framework by commas."
+      description: "Provide software and algorithm keywords for the model as a whole. Separate keywords with commas."
 
   - type: input
     id: compute_doi

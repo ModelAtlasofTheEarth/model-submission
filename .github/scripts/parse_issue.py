@@ -141,8 +141,15 @@ def parse_issue(issue):
         "version": aligned_lines(data.get("Software version used.", "")),
         "name": aligned_lines(data.get("Provide the name of the software (e.g. Underworld, ASPECT, Badlands, OpenFOAM)", "")),
         "authors": aligned_lines(data.get("software authors", "")),
-        "keywords": aligned_lines(data.get("software & algorithm keywords", "")),
     }
+
+    # Software and algorithm keywords describe the model as a whole, rather
+    # than one particular software framework.  Keep them separate from the
+    # per-framework records and combine them with scientific keywords below
+    # for the root RO-Crate entity and repository topics.
+    software_keywords = separate_string(data.get("software & algorithm keywords", ""))
+    if not software_keywords or null_response_check(software_keywords[0]):
+        software_keywords = []
     non_empty_lengths = [len(values) for values in software_fields.values() if values]
     software_count = max(non_empty_lengths, default=1)
     if len(set(non_empty_lengths)) > 1:
@@ -196,10 +203,6 @@ def parse_issue(issue):
             if log:
                 msg_log += f"**Software framework authors (line {index + 1})**\n{log}"
 
-        keywords_line = software_fields["keywords"][index] if index < len(software_fields["keywords"]) else ""
-        if keywords_line:
-            software_record["keywords"] = separate_string(keywords_line)
-
         software_version = software_fields["version"][index] if index < len(software_fields["version"]) else ""
         if software_version:
             software_record["softwareVersion"] = software_version
@@ -207,6 +210,7 @@ def parse_issue(issue):
         software_records.append(software_record)
 
     data_dict["software"] = software_records
+    data_dict["software_keywords"] = software_keywords
 
 
     #############
@@ -407,6 +411,7 @@ def parse_issue(issue):
         msg_log += "Warning: No keywords given \n"
 
     data_dict["scientific_keywords"] = keywords
+    data_dict["model_keywords"] = list(dict.fromkeys(keywords + data_dict["software_keywords"]))
 
     # funder
     #funders = [x.strip() for x in data["funder"].split(",")]
