@@ -289,6 +289,9 @@ body:
       placeholder: "e.g., https://doi.org/10.47366/sabia.v5n1a3."
       description: "Provide a DOI/URI for the computation resource (if relavent)"
 
+  - type: markdown
+    attributes:
+      value: "<br/>"
 
   - type: markdown
     attributes:
@@ -336,6 +339,10 @@ body:
         Provide a model setup image by dragging an image file into this box. Max file size is 2 Mb. 
         Add a figure caption to describe your model setup, e.g., The model uses a cartesian domain, with size 200 km x 200 km x 300 km.
 
+  - type: markdown
+    attributes:
+      value: "<br/>"
+      
   - type: markdown
     attributes:
       value: "## Section 5: Submission and the next steps"
