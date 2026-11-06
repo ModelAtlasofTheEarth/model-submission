@@ -1,7 +1,7 @@
 ---
 name: M@TE submission form
-description: Welcome to the M@TE submission form - more info to come....
-title: "Provide a title here"
+description: Welcome to the M@TE submission form.
+title: "Provide a title for your submission, this is only for GitHub"
 labels: ["new model"]
 
 body:
@@ -95,7 +95,7 @@ body:
     attributes:
       value: |
           ---
-          ### All fields below, in this section, will be automatically populated using the publication DOI _after_ the form is submitted. If no publication DOI is available, please skip the following publication DOI field and complete all of the subsequent fields manually.
+          #### All fields below, in section 1, will be automatically populated using the publication DOI _after_ the form is submitted. If no publication DOI is available, please skip the following publication DOI field and complete all of the subsequent fields manually.
         
   - type: input
     id: pub_doi
@@ -224,10 +224,8 @@ body:
       value: | 
         ## Section 3: software and compute details
 
-        ### Enter one software framework per line in the DOI/URI, repository, version, name, and author fields below. Keep those fields in the same line order; for example, line 1 in each field describes the same framework. Leave a line blank when a value is unavailable so that the remaining lines stay aligned.
-        ### The software and algorithm keywords field applies to the model as a whole and is not aligned to individual frameworks.
-        ### The framework fields below will be automatically populated using the software DOI _after_ the form is submitted. If no software DOI is available, complete them manually.
-
+        #### All fields below, in section 3, will be automatically populated using the software DOI/URI.
+        
   - type: textarea
     id: software_framework_doi_uri
     attributes:
@@ -235,24 +233,8 @@ body:
       render: text
       placeholder: "e.g., https://doi.org/10.5281/zenodo.7455999"
       description: |
-        Software used (e.g. Underworld, Badlands, Citcom, FEniCS). Enter one software framework DOI/URI per line.
-        Providing a DOI here will automatically populate the corresponding framework fields below. Keep those fields in the same order, one framework per line.
-
-  - type: textarea
-    id: software_framework_repository
-    attributes:
-      label: Software source repository
-      render: text
-      placeholder: "e.g., https://github.com/underworldcode/underworld2"
-      description: "Enter one source repository per line, in the same order as the software DOI/URI field. Leave a line blank if unavailable."
-
-  - type: textarea
-    id: software_version_id
-    attributes:
-      label: Software version used.
-      render: text
-      placeholder: "e.g., v2.17.1"
-      description: "Enter one tag, version, or commit SHA per line, in the same order as the software DOI/URI field. Leave a line blank if unavailable."
+        DOI/URI of the Software used. Enter one DOI/URI per line, this will automatically populate the following fields in section 3.
+        If you don't add a DOI/URI here, you must enter the subsequent fields in section 3.
 
   - type: textarea
     id: software_framework
@@ -269,6 +251,22 @@ body:
       label: software authors
       placeholder: "e.g., ORCID iD (or Citizen, Jane)"
       description: "Enter one software framework per line, in the same order as the software DOI/URI field. Separate multiple authors for one framework with semicolons. If blank, authors from the software DOI will be used."
+
+  - type: textarea
+    id: software_framework_repository
+    attributes:
+      label: Software source repository
+      render: text
+      placeholder: "e.g., https://github.com/underworldcode/underworld2"
+      description: "Enter one source repository per line, in the same order as the software DOI/URI field. Leave a line blank if unavailable."
+
+  - type: textarea
+    id: software_version_id
+    attributes:
+      label: Software version used.
+      render: text
+      placeholder: "e.g., v2.17.1"
+      description: "Enter one tag, version, or commit SHA per line, in the same order as the software DOI/URI field. Leave a line blank if unavailable."
 
   - type: textarea
     id: software_keywords
@@ -330,30 +328,16 @@ body:
       placeholder: "e.g., Caption for model setup figure"
       description: | 
         Provide a model setup image by dragging an image file into this box. Max file size is 2 Mb. 
-        Add a figure caption.
-
-  - type: textarea
-    id: model_setup_description
-    attributes:
-      label: add a description of your model setup
-      render: text
-      placeholder: "e.g., The model uses a cartesian domain, with size 200 km x 200 km x 300 km."
-      description: "Provide a brief (< 300 words) description of your model setup, boundary condition, assumptions. Markdown formatting can be used and will be rendered on the website."
+        Add a figure caption to describe your model setup, e.g., The model uses a cartesian domain, with size 200 km x 200 km x 300 km.
 
   - type: markdown
     attributes:
-      value: "## Section 5: Feedback and next steps"
+      value: "## Section 5: Submission and the next steps"
 
   - type: markdown
     attributes:
       value: |
         To submit the model, Click the **Create** button below. 
         This will alert the M@TE team to your submission and get the process started to include your model in the M@TE collection. 
-        Once you hit **Create** the M@TE team will review your model and contact you via GitHub.
+        Once you hit **Create** the M@TE team will review your model and contact you via GitHub and the generated GitHub Issue. 
         All steps in the M@TE process are explained at https://github.com/ModelAtlasofTheEarth/model_submission/blob/main/README.md
-
-  - type: textarea
-    attributes:
-      render: text
-      label: Provide any feedback on the model submission process?
-      placeholder: "Any feedback?"
