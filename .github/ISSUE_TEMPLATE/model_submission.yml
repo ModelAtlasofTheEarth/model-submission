@@ -93,9 +93,7 @@ body:
 
   - type: markdown
     attributes:
-      value: |
-          ---
-          #### All fields below, in section 1, will be automatically populated using the publication DOI _after_ the form is submitted. If no publication DOI is available, please skip the following publication DOI field and complete all of the subsequent fields manually.
+      value: "All fields below, in section 1, will be automatically populated using the publication DOI _after_ the form is submitted. If no publication DOI is available, please skip the following publication DOI field and complete all of the subsequent fields manually."
         
   - type: input
     id: pub_doi
@@ -150,6 +148,10 @@ body:
         Search for RORs here: https://ror.org/
         The **grant_id** part is optional.
 
+  - type: markdown
+    attributes:
+      value: "<br/>"
+      
   - type: markdown
     attributes:
       value: "## Section 2: metadata for your model inputs, code and outputs"
@@ -221,10 +223,14 @@ body:
 
   - type: markdown
     attributes:
+      value: "<br/>"
+      
+  - type: markdown
+    attributes:
       value: | 
         ## Section 3: software and compute details
 
-        #### All fields below, in section 3, will be automatically populated using the software DOI/URI.
+        All fields below, in section 3, will be automatically populated using the software DOI/URI.
         
   - type: textarea
     id: software_framework_doi_uri
@@ -239,7 +245,7 @@ body:
   - type: textarea
     id: software_framework
     attributes:
-      label: Provide the name of the software (e.g. Underworld, ASPECT, Badlands, OpenFOAM)
+      label: software name (e.g. Underworld, ASPECT, Badlands, OpenFOAM)
       render: text
       placeholder: "e.g., Underworld2"
       description: "Enter one software framework name per line, in the same order as the software DOI/URI field. The name will be fetched from the DOI when a line is left blank."
@@ -255,7 +261,7 @@ body:
   - type: textarea
     id: software_framework_repository
     attributes:
-      label: Software source repository
+      label: software source repository
       render: text
       placeholder: "e.g., https://github.com/underworldcode/underworld2"
       description: "Enter one source repository per line, in the same order as the software DOI/URI field. Leave a line blank if unavailable."
@@ -263,7 +269,7 @@ body:
   - type: textarea
     id: software_version_id
     attributes:
-      label: Software version used.
+      label: software version used.
       render: text
       placeholder: "e.g., v2.17.1"
       description: "Enter one tag, version, or commit SHA per line, in the same order as the software DOI/URI field. Leave a line blank if unavailable."
