@@ -1,3 +1,23 @@
+import html
+import re
+
+
+def extract_publication_abstract(value):
+    """Return readable abstract text from Crossref/JATS or plain text input."""
+    if isinstance(value, list):
+        value = "\n".join(str(item) for item in value if item is not None)
+    if not value:
+        return ""
+
+    text = html.unescape(str(value))
+    # Preserve paragraph boundaries before stripping XML/HTML tags.
+    text = re.sub(r"<\s*/?\s*(?:jats:)?(?:p|br)\s*/?\s*>", "\n", text, flags=re.IGNORECASE)
+    text = re.sub(r"<[^>]+>", "", text)
+    text = re.sub(r"[ \t]+", " ", text)
+    text = re.sub(r"\n\s*\n+", "\n\n", text)
+    return text.strip()
+
+
 def parse_author(metadata):
     """
     BY_AI: Parses an author metadata record into a schema.org Person dictionary.
@@ -199,7 +219,12 @@ def parse_publication(metadata):
     metadata = metadata["message"]
 
     if "@type" and "@id" in metadata.keys():
-        publication_record = metadata
+        publication_record = dict(metadata)
+        abstract = extract_publication_abstract(publication_record.get("abstract"))
+        if abstract:
+            publication_record["abstract"] = abstract
+        elif "abstract" in publication_record:
+            publication_record.pop("abstract")
         log += "Crossref metadata record succesfully extracted in json-ld format \n"
     else:
         try:
@@ -259,10 +284,9 @@ def parse_publication(metadata):
             if author_list:
                 publication_record["author"] = author_list
 
-            if "abstract" in metadata:
-                publication_record["abstract"] = (
-                    metadata["abstract"].split("<jats:p>")[1].split("</jats:p>")[0]
-                )
+            abstract = extract_publication_abstract(metadata.get("abstract"))
+            if abstract:
+                publication_record["abstract"] = abstract
 
             if "page" in metadata:
                 publication_record["pagination"] = metadata["page"]

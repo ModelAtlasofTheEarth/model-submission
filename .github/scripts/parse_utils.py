@@ -699,53 +699,25 @@ def process_funding_data(input_string):
 
     return {'funders': schema_funders, 'funding': schema_funding}
 
-def identify_separator(input_string):
+def clean_response(value):
+    """Normalize an optional issue response to a usable scalar value."""
+    value = (value or "").strip()
+    return "" if value == "_No response_" else value
+
+
+def parse_list(value, keep_blanks=False):
+    """Parse an optional comma- or newline-separated issue response.
+
+    ``keep_blanks`` preserves one value per line for aligned framework
+    metadata. Otherwise empty values and ``_No response_`` are removed.
     """
-    BY_AI: Heuristically determines whether an input string uses commas or newlines as the primary separator.
+    value = (value or "").strip()
+    if not value or value == "_No response_":
+        return []
 
-    Counts the total number of commas across all lines and compares that to the number of
-    newline characters. If there are more commas than newlines, the string is treated as
-    CSV; otherwise newline-separated is assumed.
-
-    Parameters:
-        input_string (str): The string to analyze.
-
-    Returns:
-        str: Either 'csv' if comma-separated values are detected, or 'newline' if
-            newline-separated values are detected.
-    """
-    # Strip leading and trailing whitespace and split by newline to get lines
-    lines = input_string.strip().split('\n')
-
-    # Count the number of commas and newlines
-    comma_count = sum(line.count(',') for line in lines)
-    newline_count = len(lines) - 1
-
-    # Heuristics: more commas than newlines => CSV
-    if comma_count > newline_count:
-        return 'csv'
-    else:
-        return 'newline'
-
-def separate_string(input_string):
-    """
-    BY_AI: Splits an input string into a list of trimmed tokens using the detected separator.
-
-    Calls `identify_separator` to determine whether the string uses commas or newlines
-    as delimiters, then splits and strips whitespace from each token accordingly. Empty
-    lines are discarded for newline-separated input.
-
-    
-
-    Parameters:
-        input_string (str): The string to split.
-
-    Returns:
-        list of str: A list of trimmed, non-empty tokens parsed from the input string.
-    """
-    separator_type = identify_separator(input_string)
-
-    if separator_type == 'csv':
-        return [x.strip() for line in input_string.strip().split('\n') for x in line.split(',')]
-    elif separator_type == 'newline':
-        return [line.strip() for line in input_string.strip().split('\n') if line]
+    lines = [line.strip() for line in value.splitlines()]
+    if keep_blanks:
+        return lines
+    if value.count(",") > len(lines) - 1:
+        return [token.strip() for line in lines for token in line.split(",") if token.strip()]
+    return [line for line in lines if line]

@@ -3,7 +3,7 @@ import pandas as pd
 from collections import defaultdict
 from request_utils import get_record, check_uri
 from parse_metadata_utils import parse_publication, parse_software, parse_organization
-from parse_utils import parse_name_or_orcid, parse_yes_no_choice, get_authors, get_funders, process_funding_data, parse_image_and_caption, validate_slug, extract_doi_parts, extract_orcid, remove_duplicates, parse_size, identify_separator, separate_string
+from parse_utils import parse_name_or_orcid, parse_yes_no_choice, get_authors, get_funders, process_funding_data, parse_image_and_caption, validate_slug, extract_doi_parts, extract_orcid, remove_duplicates, parse_size, clean_response, parse_list
 from dateutil import parser
 from datetime import datetime
 
@@ -34,35 +34,6 @@ def read_issue_body(issue_body):
         if len(lines) >= 2 and lines[0].strip().startswith("```") and lines[-1].strip() == "```":
             data[key] = "\n".join(lines[1:-1]).strip()
     return data
-
-
-def null_response_check(string):
-    """
-    This function evaluates whether the input string is either explicitly marked as "_No response_"
-    or is an empty string. It is designed to trigger certain prefill actions or defaults in applications
-    where user inputs can be explicitly stated as no response or left blank.
-
-    Parameters:
-    string (str): The input string to be checked for a null or empty response.
-
-    Returns:
-    bool: True if the input string is "_No response_" or an empty string, indicating a null response.
-          False otherwise.
-    """
-    result = False
-    if string == "_No response_" or string == "":
-        result = True
-    return result
-
-
-def aligned_lines(value):
-    """Return non-destructive, one-value-per-line input for aligned fields."""
-    if value is None:
-        return []
-    value = value.strip()
-    if not value or value == "_No response_":
-        return []
-    return [line.strip() for line in value.splitlines()]
 
 
 def parse_issue(issue):
@@ -111,10 +82,10 @@ def parse_issue(issue):
     #############
 
     # associated publication DOI
-    publication_doi = data["publication DOI"].strip()
+    publication_doi = clean_response(data.get("publication DOI", ""))
     publication_record = {}
 
-    if publication_doi == "_No response_":
+    if not publication_doi:
         msg_log += "**Associated Publication**\n"
         msg_log += "Warning: No DOI provided. \n"
     else:
@@ -136,20 +107,18 @@ def parse_issue(issue):
     # Each software field is aligned by line number. Unequal lengths are
     # padded and reported rather than silently shifting values.
     software_fields = {
-        "DOI/URI": aligned_lines(data.get("software DOI/URI", "")),
-        "repository": aligned_lines(data.get("Software source repository", "")),
-        "version": aligned_lines(data.get("Software version used.", "")),
-        "name": aligned_lines(data.get("Provide the name of the software (e.g. Underworld, ASPECT, Badlands, OpenFOAM)", "")),
-        "authors": aligned_lines(data.get("software authors", "")),
+        "DOI/URI": parse_list(data.get("software DOI/URI", ""), keep_blanks=True),
+        "repository": parse_list(data.get("Software source repository", ""), keep_blanks=True),
+        "version": parse_list(data.get("Software version used.", ""), keep_blanks=True),
+        "name": parse_list(data.get("Provide the name of the software (e.g. Underworld, ASPECT, Badlands, OpenFOAM)"), keep_blanks=True),
+        "authors": parse_list(data.get("software authors", ""), keep_blanks=True),
     }
 
     # Software and algorithm keywords describe the model as a whole, rather
     # than one particular software framework.  Keep them separate from the
     # per-framework records and combine them with scientific keywords below
     # for the root RO-Crate entity and repository topics.
-    software_keywords = separate_string(data.get("software & algorithm keywords", ""))
-    if not software_keywords or null_response_check(software_keywords[0]):
-        software_keywords = []
+    software_keywords = parse_list(data.get("software & algorithm keywords", ""))
     non_empty_lengths = [len(values) for values in software_fields.values() if values]
     software_count = max(non_empty_lengths, default=1)
     if len(set(non_empty_lengths)) > 1:
@@ -219,19 +188,19 @@ def parse_issue(issue):
     # The following fields get added to the data_dict: submitter, creator, contributor, data_creator.
 
     # submitter (individual). Not necessarily the creator of the original model.
-    submitter = data["submitter ORCID (or name)"].strip()
+    submitter = clean_response(data.get("submitter ORCID (or name)", ""))
     submitter_record, log = parse_name_or_orcid(submitter)
     data_dict["submitter"] = submitter_record
     if log:
         msg_log += "**Submitter**\n" + log +"\n"
 
     # model creators
-    creators = data['contributing authors'].strip().split('\r\n')
+    creators = parse_list(data.get("contributing authors", ""), keep_blanks=True)
     #test if the input has an orcid type, and if so, make sure only the orcid id is present
 
 
     #first check for null response, and try to use publication record
-    if null_response_check(creators[0]):
+    if not creators:
         try:
             creators_list = publication_record["author"]
         except:
@@ -256,21 +225,7 @@ def parse_issue(issue):
     # model contributors. This has been depricated. Now we simply record Creators, and submitter.
     #contributors = data['contributing authors'].strip().split('\r\n')
     #test if the input has an orcid type, and if so, make sure only the orcid id is present
-    #orcid_id = extract_orcid(contributors[0])
-    #if orcid_id:
-    #    contributors = [extract_orcid(p) for p in contributors]
-    #if contributors[0] == "_No response_":
-    #    try:
-    #        contributors_list = publication_record["author"]
-    #    except:
-    #        contributors_list = []
-    #        msg_log += "**Model contributors**\n"
-    #        msg_log += "Warning: no contributors found \n"
-    #else:
-    #    contributors_list, log = get_authors(contributors)
-    #    if log:
-    #        msg_log += "**Model contributors**\n" + log
-    #data_dict["contributors"] = contributors_list
+    # Contributors are no longer collected separately by the submission form.
 
     #now apply some logic? to the list of people involved...
     #remove any creators from contributors list so these do not intersect (currently only uses @id to match)
@@ -284,7 +239,7 @@ def parse_issue(issue):
 
 
     # slug
-    proposed_slug = data["slug"].strip()
+    proposed_slug = clean_response(data.get("slug", ""))
     data_dict["proposed_slug"] = proposed_slug
 
     slug, log = validate_slug(proposed_slug)
@@ -303,7 +258,7 @@ def parse_issue(issue):
     data_dict["for_codes"] = about_record
 
     # license
-    license = data["license"].strip()
+    license = clean_response(data.get("license", ""))
 
     def find_file_upwards( fName: str, maxLevels: int=5) -> str | None:
         """
@@ -331,21 +286,26 @@ def parse_issue(issue):
     #license,name,url,text,website_path
     license_record={"@type": "CreativeWork"}
     if license != "alternative":
-        license_record["@id"] = license_lut[license_lut.license == license].url.values[0]
-        license_record["description"] = license_lut[license_lut.license == license].name.values[0]
-        license_record["website_path"] = license_lut[license_lut.license == license].website_path.values[0]
-        license_record["url"] = license_lut[license_lut.license == license].text.values[0]
-        license_record["name"] = license_lut[license_lut.license == license].license.values[0]
+        license_rows = license_lut[license_lut.license == license]
+        if license_rows.empty:
+            msg_log += "**License**\n"
+            msg_log += f"Warning: Unknown license `{license}`.\n"
+            license_record["name"] = license
+        else:
+            license_record["@id"] = license_rows.url.iloc[0]
+            license_record["description"] = license_rows.name.iloc[0]
+            license_record["website_path"] = license_rows.website_path.iloc[0]
+            license_record["url"] = license_rows.text.iloc[0]
+            license_record["name"] = license_rows.license.iloc[0]
     else:
         license_record["name"] = "alternative"
     data_dict["license"] = license_record
 
     # model category
     #model_category = [x.strip() for x in data["model category"].split(",")]
-    model_category = separate_string(data["model category"])
+    model_category = parse_list(data.get("model category", ""))
 
-    #if model_category[0] == "_No response_":
-    if null_response_check(model_category[0]):
+    if not model_category:
         model_category = []
         msg_log += "**Model category**\n"
         msg_log += "Warning: No category selected \n"
@@ -357,10 +317,9 @@ def parse_issue(issue):
     model_status = []
     try:
         #model_status = [x.strip() for x in data["model status"].split(",")]
-        model_status = separate_string(data["model status"])
+        model_status = parse_list(data.get("model status", ""))
 
-        #if model_status[0] == "_No response_":
-        if null_response_check(model_status[0]):
+        if not model_status:
             msg_log += "**Model status**\n"
             msg_log += "Warning: No model status selected \n"
     except:
@@ -369,10 +328,10 @@ def parse_issue(issue):
 
 
     # title
-    title = data["title"].strip()
+    title = clean_response(data.get("title", ""))
 
     #if title == "_No response_":
-    if null_response_check(title):
+    if not title:
         try:
             title = publication_record['name']
         except:
@@ -383,10 +342,10 @@ def parse_issue(issue):
     data_dict["title"] = title
 
     # abstract
-    abstract = data["abstract"].strip()
+    abstract = clean_response(data.get("abstract", ""))
 
     #if abstract == "_No response_":
-    if null_response_check(abstract):
+    if not abstract:
         try:
             abstract = publication_record['abstract']
         except:
@@ -397,15 +356,14 @@ def parse_issue(issue):
     data_dict["abstract"] = abstract
 
     # description - brief plain langauge summary.
-    description = data["description"].strip()
+    description = clean_response(data.get("description", ""))
     data_dict["description"] = description
 
     # scientific keywords
     #keywords = [x.strip() for x in data["scientific keywords"].split(",")]
-    keywords = separate_string(data["scientific keywords"])
+    keywords = parse_list(data.get("scientific keywords", ""))
 
-    #if keywords[0] == "_No response_":
-    if null_response_check(keywords[0]):
+    if not keywords:
         keywords = []
         msg_log += "**Scientific keywords**\n"
         msg_log += "Warning: No keywords given \n"
@@ -416,11 +374,22 @@ def parse_issue(issue):
     # funder
     #funders = [x.strip() for x in data["funder"].split(",")]
 
-    funders_string = data["funder"]
-    funders_dict = process_funding_data(funders_string)
+    funders_string = clean_response(data.get("funder", ""))
+    if funders_string:
+        funders_dict = process_funding_data(funders_string)
+    else:
+        publication_funders = publication_record.get("funder", [])
+        funders_dict = {
+            "funders": publication_funders,
+            "funding": [],
+        }
+        if publication_funders:
+            msg_log += "**Funder**\n"
+            msg_log += "Note: funders were populated from the publication DOI.\n"
+        else:
+            msg_log += "**Funder**\n"
+            msg_log += "Warning: No funders provided or found in publication. \n"
 
-    #if funders[0] == "_No response_":
-    #if null_response_check(funders[0]):
     #    try:
     #        funder_list = publication_record['funder']
     #    except:
@@ -442,9 +411,8 @@ def parse_issue(issue):
     # embargo, record as a Tuple with a Boolean, and a date
     model_embargo = (False, datetime.min.strftime('%Y-%m-%d'))
     try:
-        embargo = data["model embargo?"].strip()
-        #if model_embargo[0] == "_No response_":
-        if null_response_check(embargo):
+        embargo = clean_response(data.get("model embargo?", ""))
+        if not embargo:
             pass
         else:
             try:
@@ -465,7 +433,7 @@ def parse_issue(issue):
 
 
     # include model code
-    model_code = data["include model inputs?"].strip()
+    model_code = clean_response(data.get("include model inputs?", ""))
     data_dict["include_model_code"] = parse_yes_no_choice(model_code)
 
     # model links.  The prototype form intentionally uses one field for
@@ -474,8 +442,8 @@ def parse_issue(issue):
     # the old single DOI slot is left empty because multiple links cannot be
     # represented reliably as one identifier.
     model_code_record = {}
-    model_links = separate_string(data["model links"])
-    if null_response_check(model_links[0]):
+    model_links = parse_list(data.get("model links", ""))
+    if not model_links:
         model_links = []
         msg_log += "**Model links**\n"
         msg_log += "Warning: No model links provided. \n"
@@ -483,10 +451,10 @@ def parse_issue(issue):
     model_code_record["links"] = model_links
 
     # model code/inputs notes
-    model_code_notes = data["model input usage, a.k.a reproducibility"].strip()
+    model_code_notes = clean_response(data.get("model input usage, a.k.a reproducibility", ""))
 
     #if model_code_notes == "_No response_":
-    if null_response_check(model_code_notes):
+    if not model_code_notes:
         model_code_notes = ""
         msg_log += "**Model code/inputs notes**\n"
         msg_log += "Warning: No notes provided.\n"
@@ -498,7 +466,7 @@ def parse_issue(issue):
 
 
     # include model output data
-    model_output = data["include model output?"].strip()
+    model_output = clean_response(data.get("include model output?", ""))
     #having this outside the record
     #anticipates that we might choose not to build the record if False
     data_dict["include_model_output"] = parse_yes_no_choice(model_output)
@@ -521,10 +489,10 @@ def parse_issue(issue):
     model_output_record["doi"] = ""
 
     # model output notes
-    model_output_notes = data["model output notes"].strip()
+    model_output_notes = clean_response(data.get("model output notes", ""))
 
     #if model_output_notes == "_No response_":
-    if null_response_check(model_output_notes):
+    if not model_output_notes:
         model_output_notes = ""
         msg_log += "**Model data notes**\n"
         msg_log += "Warning: No notes provided.\n"
@@ -532,11 +500,11 @@ def parse_issue(issue):
     model_output_record["notes"] = model_output_notes
 
     # model output size
-    model_output_size = data["model output size"].strip()
+    model_output_size = clean_response(data.get("model output size", ""))
     data_bytes_value = None
 
     #if model_output_size == "_No response_":
-    if null_response_check(model_output_size):
+    if not model_output_size:
             model_output_size = ""
             msg_log += "**Model data size**\n"
             msg_log += "Warning: No notes provided.\n"
@@ -564,9 +532,9 @@ def parse_issue(issue):
 
     computer_record = {}
     log1 = ''
-    computer_uri = data["computer URI/DOI"].strip()
+    computer_uri = clean_response(data.get("computer URI/DOI", ""))
     #if computer_uri == "_No response_":
-    if null_response_check(computer_uri):
+    if not computer_uri:
         msg_log += "**Computer URI/DOI**\n"
         msg_log += "Warning: No URI/DOI provided. \n"
     else:
@@ -606,11 +574,11 @@ def parse_issue(issue):
     # Section 4
     #############
     # landing page image and caption
-    img_string = data["add landing page image"].strip()
+    img_string = clean_response(data.get("add landing page image", ""))
     empty_image_record = {"filename": None, "url": ""}
 
     #if img_string == "_No response_":
-    if null_response_check(img_string):
+    if not img_string:
         msg_log += "**Landing page image**\n"
         msg_log += "Warning: No image uploaded.\n\n"
         data_dict["landing_image"] = empty_image_record
@@ -621,9 +589,9 @@ def parse_issue(issue):
         data_dict["landing_image"] = landing_image_record
 
     # animation
-    img_string = data["add an animation"].strip()
+    img_string = clean_response(data.get("add an animation", ""))
 
-    if img_string == "_No response_":
+    if not img_string:
         msg_log += "**Animation**\n"
         msg_log += "Warning: No animation uploaded.\n\n"
         data_dict["animation"] = empty_image_record
@@ -634,9 +602,9 @@ def parse_issue(issue):
         data_dict["animation"] = animation_record
 
     # graphic abstract
-    img_string = data["add a graphic abstract figure"].strip()
+    img_string = clean_response(data.get("add a graphic abstract figure", ""))
 
-    if img_string == "_No response_":
+    if not img_string:
         msg_log += "**Graphic abstract**\n"
         msg_log += "Warning: No image uploaded.\n\n"
         data_dict["graphic_abstract"] = empty_image_record
@@ -647,9 +615,9 @@ def parse_issue(issue):
         data_dict["graphic_abstract"] = graphic_abstract_record
 
     # model setup figure
-    img_string = data["add a model setup figure"].strip()
+    img_string = clean_response(data.get("add a model setup figure", ""))
 
-    if img_string == "_No response_":
+    if not img_string:
         msg_log += "**Model setup figure**\n"
         msg_log += "Warning: No image uploaded.\n\n"
         data_dict["model_setup_figure"] = empty_image_record
@@ -660,9 +628,9 @@ def parse_issue(issue):
         data_dict["model_setup_figure"] = model_setup_fig_record
 
     # description
-    model_description = data["add a description of your model setup"].strip()
+    model_description = clean_response(data.get("add a description of your model setup", ""))
 
-    if model_description == "_No response_":
+    if not model_description:
         msg_log += "**Model setup description**\n"
         msg_log += "Warning: No description given \n"
     else:
