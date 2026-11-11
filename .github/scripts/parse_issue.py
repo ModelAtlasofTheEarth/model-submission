@@ -3,7 +3,7 @@ import pandas as pd
 from collections import defaultdict
 from request_utils import get_record, check_uri
 from parse_metadata_utils import parse_publication, parse_software, parse_organization
-from parse_utils import parse_name_or_orcid, parse_yes_no_choice, get_authors, get_funders, process_funding_data, parse_image_and_caption, validate_slug, extract_doi_parts, extract_orcid, remove_duplicates, parse_size, clean_response, parse_list
+from parse_utils import parse_name_or_orcid, parse_yes_no_choice, get_authors, get_funders, process_funding_data, parse_image_and_caption, validate_slug, extract_doi_parts, extract_orcid, remove_duplicates, parse_size, clean_response, parse_list, ensure_types
 from dateutil import parser
 from datetime import datetime
 
@@ -635,6 +635,18 @@ def parse_issue(issue):
         msg_log += "Warning: No description given \n"
     else:
         data_dict["model_setup_description"] = model_description
+
+    # Make sure every entity (e.g. authors in JSON-LD returned by Zenodo or
+    # Crossref) has an @type before the RO-Crate is written.
+    type_warnings = []
+    for key, parent in [("publication", None), ("software", "instrument"),
+                        ("creators", "creator"), ("submitter", "creator"),
+                        ("funder", "funder"), ("funding", None),
+                        ("computer_resource", "instrument")]:
+        ensure_types(data_dict.get(key), parent, type_warnings)
+    ensure_types(data_dict["model_output_data"].get("creators"), "creator", type_warnings)
+    if type_warnings:
+        msg_log += "**Entities without @type**\n" + "".join(type_warnings) + "\n"
 
     # Add dateSubmitted
     data["dateSubmitted"] = datetime.now().isoformat()

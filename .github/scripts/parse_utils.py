@@ -705,6 +705,49 @@ def clean_response(value):
     return "" if value == "_No response_" else value
 
 
+PERSON_KEYS = {"author", "creator", "agent", "contributor"}
+ORGANIZATION_KEYS = {"affiliation", "funder", "publisher", "provider"}
+
+
+def ensure_types(obj, parent_key=None, warnings=None):
+    """Give untyped nested entities an ``@type``, in place.
+
+    The RO-Crate spec requires every entity to have an ``@type``, but JSON-LD
+    from external sources (e.g. Zenodo authors) can omit it. This is the only
+    place types are defaulted, so it must run before the crate is built.
+
+    Entities under person-like properties (author, creator, ...) become
+    ``Person`` and entities under organisation-like properties (affiliation,
+    funder, ...) become ``Organization``. Anything else becomes ``Thing``
+    and is reported in the returned warnings. Empty dicts, reference-only
+    dicts (just an ``@id``) and JSON-LD keywords (``@context`` etc.) are left alone.
+    """
+    if warnings is None:
+        warnings = []
+
+    if isinstance(obj, list):
+        for item in obj:
+            ensure_types(item, parent_key, warnings)
+    elif isinstance(obj, dict):
+        if obj and "@type" not in obj and set(obj) != {"@id"}:
+            if parent_key in PERSON_KEYS:
+                obj["@type"] = "Person"
+            elif parent_key in ORGANIZATION_KEYS:
+                obj["@type"] = "Organization"
+            else:
+                obj["@type"] = "Thing"
+                label = obj.get("name") or obj.get("@id") or "unnamed entity"
+                where = f" under `{parent_key}`" if parent_key else ""
+                warnings.append(
+                    f"- Warning: `{label}`{where} has no `@type` and was set to `Thing`. "
+                    "It may not display correctly on the website.\n"
+                )
+        for key, value in obj.items():
+            if not key.startswith("@"):
+                ensure_types(value, key, warnings)
+    return warnings
+
+
 def parse_list(value, keep_blanks=False):
     """Parse an optional comma- or newline-separated issue response.
 

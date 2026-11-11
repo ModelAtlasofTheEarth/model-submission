@@ -97,6 +97,10 @@ except:
 #FOR TESTING - print out dictionary as a comment
 #issue.create_comment("# M@TE crate \n"+str(metadata))
 
+# The fallback dict_to_metadata returns a JSON string; decode it so it is not double-encoded below
+if isinstance(flatcompact, str):
+    flatcompact = json.loads(flatcompact)
+
 # Move files to repo
 rocratestr_flatcompact= json.dumps(flatcompact)
 model_repo.create_file("ro-crate-metadata.json","add ro-crate", rocratestr_flatcompact, branch=model_branch)
