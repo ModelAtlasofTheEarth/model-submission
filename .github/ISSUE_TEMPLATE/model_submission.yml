@@ -165,9 +165,12 @@ body:
     attributes:
       render: text
       label: model links
-      placeholder: "e.g., https://doi.org/10.47366/sabia.v5n1a3."
-      description: "Provide any existing links where your model's inputs and/or outputs are stored (e.g., GitHub, Zenodo). Multiple links or DOIs can be included."
-  
+      placeholder: | 
+        "e.g., Zenodo link,
+               GitHub link,
+               NCI THREDDs links"
+      description: "Provide any relevant links or DOIs you would like displayed on the M@TE website. These links can help document the model's provenance and lineage. Multiple links or DOIs can be included."
+      
   - type: checkboxes
     id: input_included
     attributes:
