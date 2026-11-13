@@ -14,7 +14,7 @@ else:
 # Get issue
 auth = Auth.Token(token)
 g = Github(auth=auth)
-repo = g.get_repo("ModelAtlasofTheEarth/model_submission")
+repo = g.get_repo(os.environ.get("GITHUB_REPOSITORY", "ModelAtlasofTheEarth/model-submission"))
 issue = repo.get_issue(number = issue_number)
 if comment_id:
     comment = issue.get_comment(id = comment_id)

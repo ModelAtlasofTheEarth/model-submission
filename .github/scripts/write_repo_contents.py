@@ -33,7 +33,7 @@ timestamp = current_utc_datetime.strftime('%Y-%m-%dT%H:%M:%S.000Z')
 # Get issue
 auth = Auth.Token(token)
 g = Github(auth=auth)
-repo = g.get_repo("ModelAtlasofTheEarth/model_submission")
+repo = g.get_repo(os.environ.get("GITHUB_REPOSITORY", "ModelAtlasofTheEarth/model-submission"))
 issue = repo.get_issue(number = issue_number)
 
 # Get model repo
