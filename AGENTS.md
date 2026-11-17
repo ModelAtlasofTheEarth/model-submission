@@ -43,3 +43,7 @@ This file captures repo-specific workflow and commands so that agents operate ef
 - Metadata parsing is driven by GitHub Issue markdown; developers can debug this with `.github/debug/submission_workflow.ipynb`
 - The RO-Crate file must be named exactly `ro-crate-metadata.json` at repository root
 - Any changes to the Issue template or workflow filenames require updates in both `.github/workflows/` and the debug notebook
+
+## Future work
+- Remove the `.metadata_trail` bits, and stop creating the legacy files `issue_body.md` and `.website_material/index.json` in new model repositories.
+- Add the M@TE submission URL (the issue URL) to all new RO-Crates.

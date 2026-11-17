@@ -29,7 +29,7 @@ Using Github actions, we have regenerated a report summarising information about
 * Please check the report below, including the Errors and Warnings section \n
 * You can update any information, by editing the markdown file at the top of the issue \n
 * these edits will trigger the report will be regenerated \n
-* once you are satisfied with the results, please add a https://github.com/ModelAtlasofTheEarth/model_submission/labels/review%20requested label \n"""
+* once you are satisfied with the results, please add a https://github.com/ModelAtlasofTheEarth/model-submission/labels/review%20requested label \n"""
 
 report += f"### Parsed data \n {dict_to_report(data)} \n\n"
 
