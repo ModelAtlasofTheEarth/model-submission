@@ -351,7 +351,16 @@ def parse_issue(issue):
         except:
             abstract = ""
             msg_log += "**abstract**\n"
-            msg_log += "Warning: no abstract entered, nor abstract for associated publication \n"
+            if publication_doi:
+                msg_log += (
+                    f"Warning: Crossref has no abstract for DOI `{publication_doi}`. "
+                    "Please paste the abstract into the `abstract` field of this issue.\n"
+                )
+            else:
+                msg_log += (
+                    "Warning: no abstract entered and no publication DOI to look one up from. "
+                    "Please paste the abstract into the `abstract` field of this issue.\n"
+                )
 
     data_dict["abstract"] = abstract
 
